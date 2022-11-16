@@ -1,4 +1,7 @@
 from typing import Optional, List
+
+import pandas as pd
+
 from ..client import SnowmanClient, Prototype, AbstractAPI
 
 
@@ -71,3 +74,23 @@ class TableApi(AbstractAPI):
                 offset=offset,
             )
             r.raise_for_status()
+
+    def get_dataframe(
+        self,
+        query: str,
+        display_value: bool = False,
+        links: bool = False,
+        fields: Optional[List[str]] = None,
+    ):
+        rows = list(
+            self.yield_records(
+                query=query, display_value=display_value, links=links, fields=fields
+            )
+        )
+        for row in rows:
+            if "active" in row:
+                row["active"] = True if row["active"] == "true" else False
+            if "order" in row:
+                row["order"] = int(row["order"]) if row["order"] else None
+        df = pd.DataFrame(rows)
+        return df.set_index("sys_id")
