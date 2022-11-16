@@ -1,4 +1,4 @@
-from urllib.parse import quote
+from typing import Optional
 
 import requests
 from pydantic import BaseModel
@@ -23,21 +23,26 @@ class SnowmanClient:
             self.config.password,
         )
 
-    def get(self, path: str, params: dict):
+    def get(
+        self, path: str, params: Optional[dict] = None, accept: Optional[str] = None
+    ):
         url = self.endpoint + path
-        return self.session.get(url, params=params, auth=self.auth)
+        if accept is None:
+            accept = self.accept
+        headers = {"Accept": accept}
+        return self.session.get(url, params=params, headers=headers, auth=self.auth)
 
 
 class Prototype(BaseModel):
     namespace: str
     path: str
-    version: str
+    version: Optional[str] = None
 
     def get_base_path(self):
         if self.version:
-            return f"/api/{self,namespace}/{self.version}/{self.path}"
+            return f"/{self.namespace}/{self.version}/{self.path}"
         else:
-            return f"/api/{self.namesapce}/{self.path}"
+            return f"/{self.namespace}/{self.path}"
 
 
 class AbstractAPI:
@@ -47,4 +52,5 @@ class AbstractAPI:
         self.base_path = prototype.get_base_path()
 
     def get_rel_uri(self, *args):
-        return self.base_path + "/".join(args)
+        more_path = "/" + "/".join(args) if len(args) > 0 else ""
+        return self.base_path + more_path

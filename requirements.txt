@@ -2,7 +2,6 @@ requests
 pandas
 pydantic
 openpyxl
-ipython
 graphviz
 cryptography
 pyaml

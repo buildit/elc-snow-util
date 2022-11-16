@@ -4,9 +4,9 @@ from ..client import SnowmanClient, Prototype, AbstractAPI
 
 class TableApi(AbstractAPI):
     def __init__(
-        self, client: SnowmanClient, table_name: str, fields: Optional[List[str]]
+        self, client: SnowmanClient, table_name: str, fields: Optional[List[str]] = None
     ):
-        prototype = Prototype("now", f"table", "v2")
+        prototype = Prototype(namespace="now", path="table", version="v2")
         super().__init__(client, prototype)
         self.table_name = table_name
         self.default_fields = fields
@@ -15,7 +15,8 @@ class TableApi(AbstractAPI):
         self,
         query: str,
         display_value: bool = False,
-        exclude_links: bool = True,
+        links: bool = False,
+        pagination: bool = False,
         fields: Optional[List[str]] = None,
         limit: int = 100,
         offset: int = 0,
@@ -23,7 +24,8 @@ class TableApi(AbstractAPI):
         params = {
             "sysparm_query": query,
             "sysparm_display_value": display_value,
-            "sysparm_exclude_reference_link": exclude_links,
+            "sysparm_exclude_reference_link": not links,
+            "sysparm_suppress_pagination_header": not pagination,
             "sysparm_limit": limit,
             "sysparm_offset": offset,
         }
@@ -38,7 +40,7 @@ class TableApi(AbstractAPI):
         self,
         query: str,
         display_value: bool = False,
-        exclude_links: bool = True,
+        links: bool = False,
         fields: Optional[List[str]] = None,
     ):
         limit = 100
@@ -46,7 +48,26 @@ class TableApi(AbstractAPI):
         r = self.get_records(
             query,
             display_value=display_value,
-            exclude_links=exclude_links,
+            links=links,
             fields=fields,
+            limit=limit,
+            offset=offset,
         )
-        return r.json()
+        r.raise_for_status()
+        total = int(r.headers["X-Total-Count"])
+
+        while offset < total:
+            rows = r.json()["result"]
+            for row in rows:
+                yield row
+            offset += len(rows)
+
+            r = self.get_records(
+                query,
+                display_value=display_value,
+                links=links,
+                fields=fields,
+                limit=limit,
+                offset=offset,
+            )
+            r.raise_for_status()
