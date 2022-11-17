@@ -7,10 +7,11 @@ from .config import Configuration
 
 
 class ApiClient:
-    def __init__(self, config: Configuration):
+    def __init__(self, config: Configuration, show_progress: bool = False):
         self.config = config
         self.session = requests.Session()
         self.accept = "application/json"
+        self.show_progress = show_progress
 
     @property
     def endpoint(self):
