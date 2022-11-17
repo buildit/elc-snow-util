@@ -1,11 +1,12 @@
 import os
 from pathlib import Path
+from typing import Optional
 
 from pydantic import BaseModel, HttpUrl
 from yaml import safe_load
 
 
-class SnowmanConfig(BaseModel):
+class Configuration(BaseModel):
     endpoint: HttpUrl
     username: str
     password: str
@@ -18,7 +19,9 @@ class SnowmanConfig(BaseModel):
             return Path(os.environ["HOME"]) / ".config" / "snowman.conf"
 
     @classmethod
-    def load(cls, path: Path):
+    def load(cls, path: Optional[Path] = None):
+        if path is None:
+            path = cls.get_default_path()
         with path.open() as f:
             config = safe_load(f)
             if set(config.keys()) != {"endpoint", "username", "password"}:

@@ -2,8 +2,8 @@ import sys
 from argparse import ArgumentParser, ArgumentTypeError
 from pathlib import Path
 
-from .config import SnowmanConfig
-from .commands import command_catalog, command_config
+from .config import Configuration
+from .commands import command_catalog, command_config, command_topics
 
 # ------------------------------------------------------------------------------
 # TYPES
@@ -33,7 +33,7 @@ def create_parser(prog_name="snowman"):
         "--config",
         "-c",
         metavar="PATH",
-        default=SnowmanConfig.get_default_path(),
+        default=Configuration.get_default_path(),
         type=existing_pathlib_path,
         help="Path to a configuration file for this software",
     )
@@ -45,7 +45,7 @@ def create_parser(prog_name="snowman"):
     scmd.add_argument(
         "path",
         metavar="PATH",
-        default=SnowmanConfig.get_default_path(),
+        default=Configuration.get_default_path(),
         type=pathlib_path,
         help="Creates configuration file",
     )
@@ -54,8 +54,29 @@ def create_parser(prog_name="snowman"):
     scmd = sp.add_parser(
         "catalog", parents=[parent], help="Reads sc_cat_items to a CSV or Excel"
     )
-    scmd.add_argument("output", metavar="PATH", help="Path to CSV or Excel output")
+    scmd.add_argument("output", metavar="PATH", help="Path to CSV or Excel")
+    scmd.add_argument(
+        "--extend",
+        "-e",
+        action="store_true",
+        default=False,
+        help="Add columns for missing meuns and mismatch",
+    )
     scmd.set_defaults(func=command_catalog)
+
+    # command to analyze topics
+    scmd = sp.add_parser(
+        "topics", parents=[parent], help="Reads topic table to a CSV or Excel"
+    )
+    scmd.add_argument("output", metavar="PATH", help="Path to CSV or Excel")
+    scmd.add_argument(
+        "--active",
+        "-a",
+        action="store_true",
+        default=False,
+        help="Retrieve only active topics",
+    )
+    scmd.set_defaults(func=command_topics)
 
     return parser
 
@@ -78,7 +99,7 @@ def main(args=None):
     if opts.command == "config":
         return command_config(opts)
 
-    config = SnowmanConfig.load(opts.config)
+    config = Configuration.load(opts.config)
     return (opts.func)(config, opts)
 
 

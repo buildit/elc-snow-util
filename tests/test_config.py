@@ -3,12 +3,12 @@ from textwrap import dedent
 
 import pytest
 
-from snowman.config import SnowmanConfig
+from snowboard.config import Configuration
 
 
 def test_config_init():
-    config = SnowmanConfig(
-        endpoint="https://dev27782.service-now.com/api",
+    config = Configuration(
+        endpoint="https://dev27782.service-now.com/api",  # type: ignore
         username="admin1",
         password="admin$pwd",
     )
@@ -21,14 +21,14 @@ def test_config_init():
 
 
 def test_config_default_path():
-    path = SnowmanConfig.get_default_path()
+    path = Configuration.get_default_path()
     assert isinstance(path, Path)
 
 
 def test_config_load_file_not_found(tmp_path):
     path = tmp_path / "snowman.conf"
     with pytest.raises(FileNotFoundError):
-        SnowmanConfig.load(path)
+        Configuration.load(path)
 
 
 def test_config_load_ok(tmp_path):
@@ -42,7 +42,7 @@ def test_config_load_ok(tmp_path):
     """
         )
     )
-    config = SnowmanConfig.load(path)
+    config = Configuration.load(path)
     assert config.username == "admin"
     assert config.password == "admin"
     assert config.endpoint == "https://skdjksjjs.example.service-now.com/api"

@@ -1,23 +1,25 @@
+import time
 from typing import Optional, List
 
 import pandas as pd
-
-from ..client import SnowmanClient, Prototype, AbstractAPI
+from ..client import ApiClient, Prototype, AbstractAPI
+from ..tables import SnowTable, SnowTableData
 
 
 class TableApi(AbstractAPI):
-    def __init__(
-        self, client: SnowmanClient, table_name: str, fields: Optional[List[str]] = None
-    ):
+    def __init__(self, client: ApiClient, table: SnowTable | SnowTableData):
         prototype = Prototype(namespace="now", path="table", version="v2")
         super().__init__(client, prototype)
-        self.table_name = table_name
-        self.default_fields = fields
+        if isinstance(table, SnowTable):
+            table = table.data
+        if not isinstance(table, SnowTableData):
+            raise TypeError("must be SnowTable enum member or SnowTableData")
+        self.table = table
 
     def get_records(
         self,
-        query: str,
-        display_value: bool = False,
+        query: Optional[str] = None,
+        display_value: Optional[bool] = None,
         links: bool = False,
         pagination: bool = False,
         fields: Optional[List[str]] = None,
@@ -25,31 +27,33 @@ class TableApi(AbstractAPI):
         offset: int = 0,
     ):
         params = {
-            "sysparm_query": query,
-            "sysparm_display_value": display_value,
             "sysparm_exclude_reference_link": not links,
             "sysparm_suppress_pagination_header": not pagination,
             "sysparm_limit": limit,
             "sysparm_offset": offset,
         }
+        if query is not None:
+            params["sysparm_query"] = query
+        if display_value is not None:
+            params["sysparm_display_value"] = (display_value,)
         if fields is None:
-            fields = self.default_fields
+            fields = self.table.default_fields
         if fields and len(fields) > 0:
             params["sysparm_fields"] = ",".join(fields)
-        rel_uri = self.get_rel_uri(self.table_name)
+        rel_uri = self.get_rel_uri(self.table.name)
         return self.client.get(rel_uri, params)
 
     def yield_records(
         self,
-        query: str,
-        display_value: bool = False,
+        query: Optional[str] = None,
+        display_value: Optional[bool] = None,
         links: bool = False,
         fields: Optional[List[str]] = None,
     ):
         limit = 100
         offset = 0
         r = self.get_records(
-            query,
+            query=query,
             display_value=display_value,
             links=links,
             fields=fields,
@@ -66,7 +70,7 @@ class TableApi(AbstractAPI):
             offset += len(rows)
 
             r = self.get_records(
-                query,
+                query=query,
                 display_value=display_value,
                 links=links,
                 fields=fields,
@@ -77,14 +81,13 @@ class TableApi(AbstractAPI):
 
     def get_dataframe(
         self,
-        query: str,
-        display_value: bool = False,
+        query: Optional[str] = None,
         links: bool = False,
         fields: Optional[List[str]] = None,
     ):
         rows = list(
             self.yield_records(
-                query=query, display_value=display_value, links=links, fields=fields
+                query=query, display_value=False, links=links, fields=fields
             )
         )
         for row in rows:
@@ -92,5 +95,10 @@ class TableApi(AbstractAPI):
                 row["active"] = True if row["active"] == "true" else False
             if "order" in row:
                 row["order"] = int(row["order"]) if row["order"] else None
+
+            if self.table.field_mapping is not None:
+                for old_name, new_name in self.table.field_mapping.items():
+                    if old_name in row:
+                        row[new_name] = row.pop(old_name)
         df = pd.DataFrame(rows)
         return df.set_index("sys_id")

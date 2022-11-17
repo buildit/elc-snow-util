@@ -1,9 +1,9 @@
 import requests
-from snowman.client import SnowmanClient, Prototype, AbstractAPI
+from snowboard.client import ApiClient, Prototype, AbstractAPI
 
 
 def test_make_client(test_config):
-    client = SnowmanClient(test_config)
+    client = ApiClient(test_config)
     assert client.endpoint == "https://fake.service-now.com/api"
     assert client.auth == ("carlsagan", "stars")
     assert client.accept == "application/json"
@@ -21,12 +21,12 @@ def test_prototype_v2():
 
 
 def test_get_rel_uri(test_config):
-    client = SnowmanClient(test_config)
+    client = ApiClient(test_config)
     api = AbstractAPI(client, Prototype(namespace="now", path="table"))
     assert api.get_rel_uri() == "/now/table"
 
 
 def test_get_rel_uri_with_args(test_config):
-    client = SnowmanClient(test_config)
+    client = ApiClient(test_config)
     api = AbstractAPI(client, Prototype(namespace="now", path="table"))
     assert api.get_rel_uri("topic", "again") == "/now/table/topic/again"

@@ -1,11 +1,12 @@
 import pytest
-from snowman.config import SnowmanConfig
+from pydantic import AnyHttpUrl
+from snowboard.config import Configuration
 
 
 @pytest.fixture
 def test_config():
-    return SnowmanConfig(
-        endpoint="https://fake.service-now.com/api",
+    return Configuration(
+        endpoint="https://fake.service-now.com/api",  # type: ignore
         username="carlsagan",
         password="stars",
     )

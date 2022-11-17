@@ -3,11 +3,11 @@ from typing import Optional
 import requests
 from pydantic import BaseModel
 
-from .config import SnowmanConfig
+from .config import Configuration
 
 
-class SnowmanClient:
-    def __init__(self, config: SnowmanConfig):
+class ApiClient:
+    def __init__(self, config: Configuration):
         self.config = config
         self.session = requests.Session()
         self.accept = "application/json"
@@ -30,7 +30,9 @@ class SnowmanClient:
         if accept is None:
             accept = self.accept
         headers = {"Accept": accept}
-        return self.session.get(url, params=params, headers=headers, auth=self.auth)
+        return self.session.get(
+            url, params=params, headers=headers, auth=self.auth, verify=False
+        )
 
 
 class Prototype(BaseModel):
@@ -46,7 +48,11 @@ class Prototype(BaseModel):
 
 
 class AbstractAPI:
-    def __init__(self, client: SnowmanClient, prototype: Prototype):
+    def __init__(self, client: ApiClient, prototype: Prototype):
+        if not isinstance(client, ApiClient):
+            raise TypeError("should be snowboard.client.ApiClient")
+        if not isinstance(prototype, Prototype):
+            raise TypeError("should be snowboard.client.Prototype")
         self.client = client
         self.prototype = prototype
         self.base_path = prototype.get_base_path()
