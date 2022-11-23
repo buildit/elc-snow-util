@@ -3,12 +3,12 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "elc-snow-utils"
+name = "elc-snow-util"
 version = "1.0.0"
 authors = [
   { name="Dan Davis", email="daniel.davis@wipro.com" },
 ]
-description = "Python script developed for ServiceNow for reporting and content sorting in the Employee Center"
+description = "Python CLI including reports and backend scripts for the Employee Center"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -17,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "openpyxl",
     "requests",
     "pandas",
     "pydantic",
@@ -25,6 +26,9 @@ dependencies = [
     "python-magic; sys_platform != 'win32'",
     "python-magic-bin; sys_platform == 'win32'",
 ]
+
+[project.scripts]
+elc-snow-util = "snowboard.cli:main"
 
 [project.urls]
 "Homepage" = "https://github.com/buildit/elc-snow-util"

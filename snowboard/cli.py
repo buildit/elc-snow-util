@@ -8,7 +8,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from .config import Configuration
 from .commands import (
     command_catalog,
-    command_config,
+    # command_config,
     command_sort_content,
     command_topics,
     command_topic_icons,
@@ -21,13 +21,6 @@ from .commands import (
 
 def pathlib_path(value: str):
     return Path(value)
-
-
-def existing_pathlib_path(value: str):
-    path = Path(value)
-    if not path.exists():
-        raise ArgumentTypeError("path does not exist")
-    return path
 
 
 # ------------------------------------------------------------------------------
@@ -43,7 +36,7 @@ def create_parser(prog_name="snowman"):
         "-c",
         metavar="PATH",
         default=Configuration.get_default_path(),
-        type=existing_pathlib_path,
+        type=pathlib_path,
         help="Path to a configuration file for this software",
     )
     parent.add_argument(
@@ -134,24 +127,31 @@ def create_parser(prog_name="snowman"):
 
 
 def main(args=None):
+    # because of Zscaler, we need to not verify requests
+    filterwarnings("ignore", category=InsecureRequestWarning)
+
+    # parse arguments
     if args is None:
         args = sys.argv
     parser = create_parser(args[0])
     opts = parser.parse_args(args[1:])
 
+    # must be a sub-command
     if not hasattr(opts, "func"):
         parser.print_help()
         return 1
 
     # if opts.command == "config":
     #     return command_config(opts)
+    if not opts.config.exists():
+        print("{}: configuration file not found".format(opts.config), file=sys.stderr)
+        return 1
 
     config = Configuration.load(opts.config)
     return (opts.func)(config, opts)
 
 
 if __name__ == "__main__":
-    filterwarnings("ignore", category=InsecureRequestWarning)
     rv = main()
     if rv != 0:
         raise SystemExit(rv)
