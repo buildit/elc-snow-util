@@ -19,29 +19,27 @@ def get_items_dataframe(client, desired_fields=None):
     return items
 
 
-def get_active_items_dataframe(client, desired_fields=None):
-    items = get_items_dataframe(client, desired_fields)
-    active_items = items[items.active == True]
-    return active_items.drop(columns=["active"])
-
-
-def get_connected_content_dataframe(client):
+def get_connected_content_dataframe(client, fields=None):
     connected_content_api = TableApi(client, SnowTable.CONNECTED_CONTENT)
-    return connected_content_api.get_dataframe(ELQueries.CONNNECTED_CONTENT_QUERY)
+    return connected_content_api.get_dataframe(
+        ELQueries.CONNNECTED_CONTENT_QUERY, fields=fields
+    )
 
 
-def extend_active_items_with_menu_location(items_df, content_df):
+def extend_items_with_menu_location(items_df, content_df):
     all_mask = content_df.topic_path.str.startswith("All /")
     all_menu_content = content_df[all_mask]
     home_menu_content = content_df[~all_mask]
 
     def all_menu_path(sys_id):
         df = all_menu_content[all_menu_content.catalog_item == sys_id]
-        return "\n".join(list(df.topic_path))
+        return "\r\n".join(
+            sorted(topic_path.replace("All / ", "") for topic_path in df.topic_path)
+        )
 
     def home_menu_path(sys_id):
         df = home_menu_content[home_menu_content.catalog_item == sys_id]
-        return "\n".join(list(df.topic_path))
+        return "\r\n".join(sorted(df.topic_path))
 
     items_df.reset_index(inplace=True)
     items_df["all_menu_path"] = items_df.sys_id.apply(all_menu_path)
@@ -54,8 +52,7 @@ def add_missing_and_mismatch_columns(df):
     df["missing_menu"] = missing_mask.apply(lambda t: "Missing" if t else "")
 
     # mismatch
-    temp_all_path = df.all_menu_path.str.replace("^All / ", "")
-    mismatch_mask = ~missing_mask & (temp_all_path != df.home_menu_path)
+    mismatch_mask = ~missing_mask & (df.all_menu_path != df.home_menu_path)
     df["menu_mismatch"] = mismatch_mask.apply(lambda t: "Mismatch" if t else "")
     return df
 

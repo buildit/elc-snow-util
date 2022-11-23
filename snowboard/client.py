@@ -1,4 +1,5 @@
-from typing import Optional
+import json
+from typing import Optional, Dict
 
 import requests
 from pydantic import BaseModel
@@ -33,6 +34,22 @@ class ApiClient:
         headers = {"Accept": accept}
         return self.session.get(
             url, params=params, headers=headers, auth=self.auth, verify=False
+        )
+
+    def put(
+        self,
+        path: str,
+        body: Dict[str, object],
+        params: Optional[dict] = None,
+        accept: Optional[str] = None,
+    ):
+        url = self.endpoint + path
+        if accept is None:
+            accept = self.accept
+        headers = {"Accept": accept, "Content-Type": "application/json"}
+        data = json.dumps(body)
+        return self.session.put(
+            url, params=params, headers=headers, auth=self.auth, verify=False, data=data
         )
 
 

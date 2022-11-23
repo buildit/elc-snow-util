@@ -16,6 +16,45 @@ class TableApi(AbstractAPI):
             raise TypeError("must be SnowTable enum member or SnowTableData")
         self.table = table
 
+    def get_record(
+        self,
+        sys_id: str,
+        display_value: Optional[bool] = None,
+        links: bool = False,
+        fields: Optional[List[str]] = None,
+    ):
+        params = {
+            "sysparm_exclude_reference_link": not links,
+        }
+        if display_value is not None:
+            params["sysparm_display_value"] = display_value
+        if fields is None:
+            fields = self.table.default_fields
+        if fields and len(fields) > 0:
+            params["sysparm_fields"] = ",".join(fields)  # type: ignore
+        rel_uri = self.get_rel_uri(self.table.name, sys_id)
+        return self.client.get(rel_uri, params)
+
+    def update_record(
+        self,
+        sys_id: str,
+        body: dict,
+        display_value: Optional[bool] = None,
+        links: bool = False,
+        fields: Optional[List[str]] = None,
+    ):
+        params = {
+            "sysparm_exclude_reference_link": not links,
+        }
+        if display_value is not None:
+            params["sysparm_display_value"] = display_value
+        if fields is None:
+            fields = self.table.default_fields
+        if fields and len(fields) > 0:
+            params["sysparm_fields"] = ",".join(fields)  # type: ignore
+        rel_uri = self.get_rel_uri(self.table.name, sys_id)
+        return self.client.put(rel_uri, body, params)
+
     def get_records(
         self,
         query: Optional[str] = None,
@@ -35,7 +74,7 @@ class TableApi(AbstractAPI):
         if query is not None:
             params["sysparm_query"] = query
         if display_value is not None:
-            params["sysparm_display_value"] = (display_value,)
+            params["sysparm_display_value"] = display_value
         if fields is None:
             fields = self.table.default_fields
         if fields and len(fields) > 0:
@@ -100,5 +139,5 @@ class TableApi(AbstractAPI):
                 for old_name, new_name in self.table.field_mapping.items():
                     if old_name in row:
                         row[new_name] = row.pop(old_name)
-        df = pd.DataFrame(rows)
+        df = pd.DataFrame(rows)  # noqa:
         return df.set_index("sys_id")

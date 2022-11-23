@@ -6,3 +6,4 @@ graphviz
 cryptography
 pyaml
 pytest
+python-magic
