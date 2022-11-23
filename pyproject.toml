@@ -16,6 +16,15 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "requests",
+    "pandas",
+    "pydantic",
+    "progress",
+    "pyaml",
+    "python-magic; sys_platform != 'win32'",
+    "python-magic-bin; sys_platform == 'win32'",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/buildit/elc-snow-util"

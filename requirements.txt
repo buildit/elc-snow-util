@@ -1,9 +1,6 @@
 requests
 pandas
 pydantic
-openpyxl
-graphviz
-cryptography
 progress
 pyaml
 python-magic
