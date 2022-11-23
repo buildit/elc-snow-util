@@ -59,6 +59,8 @@ class SnowTable(Enum):
         },
     )
 
+    TAXONOMY = ("taxonomy", None, None)
+
     # For some reason, querying fewer that all ciolumns of sc_cat_item produces errors
     CATALOG_ITEMS = ("sc_cat_item", None, None)
 

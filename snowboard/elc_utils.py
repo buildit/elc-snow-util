@@ -1,3 +1,5 @@
+import sys
+
 from . import TableApi
 from .tables import SnowTable, CATALOG_ITEM_LEAST_FIELDS, CATALOG_ITEM_CLASSES
 
@@ -5,61 +7,64 @@ from .tables import SnowTable, CATALOG_ITEM_LEAST_FIELDS, CATALOG_ITEM_CLASSES
 class ELQueries:
     CONNECTED_CONTENT_QUERY = "topic.taxonomy.name={}"
     TOPIC_QUERY = "taxonomy.name={}"
-    ACTIVE_TOPIC_QUERY = "taxonomy.name={}^active=true"
+    TAXONOMY_QUERY = "name={}"
 
 
-def get_items_dataframe(client, desired_fields=None):
+def verify_taxonomy(client):
+    query = ELQueries.TAXONOMY_QUERY.format(client.config.taxonomy)
+    taxonomy_api = TableApi(client, SnowTable.TAXONOMY)
+    r = taxonomy_api.get_records(query)
+    r.raise_for_status()
+    results = r.json()["result"]
+    num_found = len(results)
+    if num_found == 0:
+        print(f"Taxonomy {client.config.taxonomy}: not found", file=sys.stderr)
+        return False
+    elif num_found > 1:
+        print(f"Taxonomy {client.config.taxonomy}: too many found", file=sys.stderr)
+        return False
+    return True
+
+
+def get_items_dataframe(client, active=False, desired_fields=None):
+    # determine the fields we need
     if desired_fields is None:
         desired_fields = CATALOG_ITEM_LEAST_FIELDS
+
     items_api = TableApi(client, SnowTable.CATALOG_ITEMS)
     items = items_api.get_dataframe()
     items.reset_index(inplace=True)
     items = items.loc[:, desired_fields]
     items = items.set_index("sys_id")
+
+    if active:
+        items = items[items.active]
+        items = items.drop(columns=["active"])
     return items
 
 
-def get_connected_content_dataframe(client, fields=None):
+def get_connected_content_dataframe(client, fields=None, active=False):
+    query = ELQueries.CONNECTED_CONTENT_QUERY.format(client.config.taxonomy)
+    if active:
+        query += "^topic.active=true"
     connected_content_api = TableApi(client, SnowTable.CONNECTED_CONTENT)
-    return connected_content_api.get_dataframe(
-        ELQueries.CONNECTED_CONTENT_QUERY, fields=fields
-    )
+    return connected_content_api.get_dataframe(query, fields=fields)
 
 
 def extend_items_with_menu_location(items_df, content_df):
-    all_mask = content_df.topic_path.str.startswith("All /")
-    all_menu_content = content_df[all_mask]
-    home_menu_content = content_df[~all_mask]
-
-    def all_menu_path(sys_id):
-        df = all_menu_content[all_menu_content.catalog_item == sys_id]
-        return "\r\n".join(
-            sorted(topic_path.replace("All / ", "") for topic_path in df.topic_path)  # type: ignore
-        )
-
-    def home_menu_path(sys_id):
-        df = home_menu_content[home_menu_content.catalog_item == sys_id]
+    def menu_path(sys_id):
+        df = content_df[content_df.catalog_item == sys_id]
         return "\r\n".join(sorted(df.topic_path))
 
     items_df.reset_index(inplace=True)
-    items_df["all_menu_path"] = items_df.sys_id.apply(all_menu_path)
-    items_df["home_menu_path"] = items_df.sys_id.apply(home_menu_path)
-
-
-def add_missing_and_mismatch_columns(df):
-    # menu is missing - it cannot be a mismatch
-    missing_mask = (df.all_menu_path == "") & (df.home_menu_path == "")
-    df["missing_menu"] = missing_mask.apply(lambda t: "Missing" if t else "")
-
-    # mismatch
-    mismatch_mask = ~missing_mask & (df.all_menu_path != df.home_menu_path)
-    df["menu_mismatch"] = mismatch_mask.apply(lambda t: "Mismatch" if t else "")
-    return df
+    items_df["topic_path"] = items_df.sys_id.apply(menu_path)
 
 
 def get_topics_dataframe(client, active=False):
     topics_api = TableApi(client, SnowTable.TOPICS)
-    topics_df = topics_api.get_dataframe(ELQueries.TOPIC_QUERY)
+
+    query = ELQueries.TOPIC_QUERY.format(client.config.taxonomy)
+    topics_df = topics_api.get_dataframe(query)
 
     if active:
         topics_df = topics_df[topics_df.active]

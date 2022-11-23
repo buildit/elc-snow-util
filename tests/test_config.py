@@ -11,6 +11,7 @@ def test_config_init():
         endpoint="https://dev27782.service-now.com/api",  # type: ignore
         username="admin1",
         password="admin$pwd",
+        taxonomy="Employee",
     )
     assert config.endpoint == "https://dev27782.service-now.com/api"
     assert config.endpoint.scheme == "https"
@@ -18,6 +19,7 @@ def test_config_init():
     assert config.endpoint.path == "/api"
     assert config.username == "admin1"
     assert config.password == "admin$pwd"
+    assert config.taxonomy == "Employee"
 
 
 def test_config_default_path():
@@ -39,6 +41,7 @@ def test_config_load_ok(tmp_path):
         endpoint: https://skdjksjjs.example.service-now.com/api/
         username: admin
         password: admin
+        taxonomy: Production
     """
         )
     )
@@ -46,3 +49,4 @@ def test_config_load_ok(tmp_path):
     assert config.username == "admin"
     assert config.password == "admin"
     assert config.endpoint == "https://skdjksjjs.example.service-now.com/api"
+    assert config.taxonomy == "Production"

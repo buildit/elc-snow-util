@@ -17,9 +17,9 @@ from .elc_utils import (
     get_items_dataframe,
     get_connected_content_dataframe,
     extend_items_with_menu_location,
-    add_missing_and_mismatch_columns,
     get_topics_dataframe,
     extend_topics_dataframe,
+    verify_taxonomy,
 )
 
 
@@ -35,7 +35,6 @@ def command_config(opts: Namespace):
 
 
 def command_topics(config: Configuration, opts: Namespace):
-
     # what is the output format
     if opts.output.endswith(".csv"):
         output_format = FileFormat.CSV
@@ -46,6 +45,8 @@ def command_topics(config: Configuration, opts: Namespace):
 
     # create the client
     client = ApiClient(config)
+    if not verify_taxonomy(client):
+        return 1
     stime = time.perf_counter()
     if not opts.quiet:
         client.progress = Spinner("API Requests ")
@@ -70,6 +71,7 @@ def command_topics(config: Configuration, opts: Namespace):
         topics_df.to_csv(opts.output, index=False)
     else:
         topics_df.to_excel(opts.output, index=False)
+    return 0
 
 
 def command_catalog(config: Configuration, opts: Namespace):
@@ -89,6 +91,8 @@ def command_catalog(config: Configuration, opts: Namespace):
 
     # create the client
     client = ApiClient(config)
+    if not verify_taxonomy(client):
+        return 1
     stime = time.perf_counter()
     if not opts.quiet:
         client.progress = Spinner("API Requests ")
@@ -105,31 +109,34 @@ def command_catalog(config: Configuration, opts: Namespace):
         print("{} API Calls in {:.2f} seconds".format(call_count, elapsed))
 
     # do remaining transformations
+    extend_items_with_menu_location(items_df, content_df)
 
-    # NOTE - extend is missing...
     if drop_missing:
-        missing_mask = (items_df.all_menu_path == "") & (items_df.home_menu_path == "")
+        missing_mask = items_df.topic_path == ""
         items_df = items_df[~missing_mask]
 
     # save to spreadsheet
     if output_format == FileFormat.CSV:
         items_df.to_csv(opts.output, index=False)
     else:
+        # map class names to their display value
         items_df.sys_class_name = items_df.sys_class_name.apply(
             lambda name: CATALOG_ITEM_CLASSES.get(name, name)
         )
 
-        # more excel friendly names
+        # map colunmn names to more excel friendly names
+        column_name_map = {
+            "sys_id": "Item SysID",
+            "sys_class_name": "Class",
+            "name": "Item Name",
+            "active": "Item Active",
+            "short_description": "Item Description",
+            "taxonomy_topic": "Item Topic SysID",
+            "sc_catalogs": "Catalog SysID",
+            "topic_path": "Menu Path",
+        }
         column_names = [
-            "Item SysID",
-            "Class",
-            "Item Name",
-            "Item Description",
-            "Item Active",
-            "Item Taxonomy Topic",
-            "Catalogs SysID",
-            "All Menu Path",
-            "Home Menu Path",
+            column_name_map.get(column, column) for column in items_df.columns
         ]
         items_df.columns = column_names  # type: ignore
         items_df.to_excel(opts.output, index=False)
@@ -142,6 +149,8 @@ def command_topic_icons(config: Configuration, opts: Namespace):
 
     # create the client
     client = ApiClient(config)
+    if not verify_taxonomy(client):
+        return 1
     stime = time.perf_counter()
     if not opts.quiet:
         client.progress = Spinner("API Requests ")
@@ -193,6 +202,8 @@ def command_topic_icons(config: Configuration, opts: Namespace):
 def command_sort_content(config: Configuration, opts: Namespace):
     # create the client
     client = ApiClient(config)
+    if not verify_taxonomy(client):
+        return 1
     stime = time.perf_counter()
     if not opts.quiet:
         client.progress = Spinner("API Requests ")

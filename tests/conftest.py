@@ -9,4 +9,5 @@ def test_config():
         endpoint="https://fake.service-now.com/api",  # type: ignore
         username="carlsagan",
         password="stars",
+        taxonomy="StarClassification",
     )

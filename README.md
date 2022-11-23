@@ -9,7 +9,13 @@ with the Employee Center application.
 * Download a tarball of a release of this command
 * Run the following to install
 
-    pip install elc-snow-util-1.0.0.tar.gz
+```
+pip install elc-snow-util-1.0.0.tar.gz
+```
+
+## Virtual Environments
+
+It really is better to install a command like this in a Python virtual environment, but explaining how to use them is beyond the scope of this docuemntation.
 
 # Configuration File
 
