@@ -3,7 +3,7 @@ from .tables import SnowTable, CATALOG_ITEM_LEAST_FIELDS, CATALOG_ITEM_CLASSES
 
 
 class ELQueries:
-    CONNNECTED_CONTENT_QUERY = "topic.taxonomy.name=ELC_Employee_Center"
+    CONNECTED_CONTENT_QUERY = "topic.taxonomy.name=ELC_Employee_Center"
     TOPIC_QUERY = "taxonomy.name=ELC_Employee_Center"
     ACTIVE_TOPIC_QUERY = "taxonomy.name=ELC_Employee_Center^active=true"
 
@@ -22,7 +22,7 @@ def get_items_dataframe(client, desired_fields=None):
 def get_connected_content_dataframe(client, fields=None):
     connected_content_api = TableApi(client, SnowTable.CONNECTED_CONTENT)
     return connected_content_api.get_dataframe(
-        ELQueries.CONNNECTED_CONTENT_QUERY, fields=fields
+        ELQueries.CONNECTED_CONTENT_QUERY, fields=fields
     )
 
 
@@ -34,7 +34,7 @@ def extend_items_with_menu_location(items_df, content_df):
     def all_menu_path(sys_id):
         df = all_menu_content[all_menu_content.catalog_item == sys_id]
         return "\r\n".join(
-            sorted(topic_path.replace("All / ", "") for topic_path in df.topic_path)
+            sorted(topic_path.replace("All / ", "") for topic_path in df.topic_path)  # type: ignore
         )
 
     def home_menu_path(sys_id):

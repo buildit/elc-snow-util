@@ -4,6 +4,6 @@ pydantic
 openpyxl
 graphviz
 cryptography
+progress
 pyaml
-pytest
 python-magic

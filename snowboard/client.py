@@ -2,17 +2,26 @@ import json
 from typing import Optional, Dict
 
 import requests
+from progress import Infinite
 from pydantic import BaseModel
 
 from .config import Configuration
 
 
 class ApiClient:
-    def __init__(self, config: Configuration, show_progress: bool = False):
+    def __init__(self, config: Configuration):
         self.config = config
         self.session = requests.Session()
         self.accept = "application/json"
-        self.show_progress = show_progress
+        self._progress = None
+
+    @property
+    def progress(self):
+        return self._progress
+
+    @progress.setter
+    def progress(self, progress: Infinite | None):
+        self._progress = progress
 
     @property
     def endpoint(self):
@@ -32,6 +41,8 @@ class ApiClient:
         if accept is None:
             accept = self.accept
         headers = {"Accept": accept}
+        if self._progress:
+            self._progress.next()
         return self.session.get(
             url, params=params, headers=headers, auth=self.auth, verify=False
         )
@@ -48,6 +59,8 @@ class ApiClient:
             accept = self.accept
         headers = {"Accept": accept, "Content-Type": "application/json"}
         data = json.dumps(body)
+        if self._progress:
+            self._progress.next()
         return self.session.put(
             url, params=params, headers=headers, auth=self.auth, verify=False, data=data
         )

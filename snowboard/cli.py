@@ -46,6 +46,13 @@ def create_parser(prog_name="snowman"):
         type=existing_pathlib_path,
         help="Path to a configuration file for this software",
     )
+    parent.add_argument(
+        "--quiet",
+        "-q",
+        action="store_true",
+        default=False,
+        help="Suppress progress report",
+    )
     parser = ArgumentParser(prog=prog_name, description="Utility for ServiceNow")
     sp = parser.add_subparsers(dest="command")
 

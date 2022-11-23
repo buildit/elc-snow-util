@@ -1,13 +1,19 @@
 import sys
+import time
+import unicodedata
 from argparse import Namespace
 from enum import Enum, unique
 
 import magic
 import requests
+from progress.bar import Bar
+from progress.spinner import Spinner
 
 from . import Configuration, ApiClient
-from .tables import CATALOG_ITEM_CLASSES
+from .apis.table_api import TableApi
+from .tables import CATALOG_ITEM_CLASSES, SnowTable
 from .elc_utils import (
+    ELQueries,
     get_items_dataframe,
     get_connected_content_dataframe,
     extend_items_with_menu_location,
@@ -38,13 +44,28 @@ def command_topics(config: Configuration, opts: Namespace):
     else:
         raise ValueError("only supports CSV and XLSX extensions")
 
-    # go get the data
+    # create the client
     client = ApiClient(config)
+    stime = time.perf_counter()
+    if not opts.quiet:
+        client.progress = Spinner("API Requests ")
+
+    # go get the data
     topics_df = get_topics_dataframe(client, active=opts.active)
     content_df = get_connected_content_dataframe(client)
+
+    # show performance
+    if client.progress:
+        client.progress.finish()
+        call_count = client.progress.index
+        elapsed = time.perf_counter() - stime
+        print("{} API Calls in {:.2f} seconds".format(call_count, elapsed))
+
+    # do remaining transformations
     extend_topics_dataframe(topics_df, content_df)
     topics_df.reset_index(inplace=True)
 
+    # save to spreadsheet
     if output_format == FileFormat.CSV:
         topics_df.to_csv(opts.output, index=False)
     else:
@@ -65,10 +86,24 @@ def command_catalog(config: Configuration, opts: Namespace):
     else:
         raise ValueError("only supports CSV and XLSX extensions")
 
+    # create the client
     client = ApiClient(config)
+    stime = time.perf_counter()
+    if not opts.quiet:
+        client.progress = Spinner("API Requests ")
+
+    # go get the data
     items_df = get_items_dataframe(client)
     content_df = get_connected_content_dataframe(client)
 
+    # show performance
+    if client.progress:
+        client.progress.finish()
+        call_count = client.progress.index
+        elapsed = time.perf_counter() - stime
+        print("{} API Calls in {:.2f} seconds".format(call_count, elapsed))
+
+    # do remaining transformations
     extend_items_with_menu_location(items_df, content_df)
     if extend_flag:
         add_missing_and_mismatch_columns(items_df)
@@ -80,6 +115,7 @@ def command_catalog(config: Configuration, opts: Namespace):
         if extend_flag:
             items_df.drop(columns="menu_missing", inplace=True)
 
+    # save to spreadsheet
     if output_format == FileFormat.CSV:
         items_df.to_csv(opts.output, index=False)
     else:
@@ -113,9 +149,23 @@ def command_topic_icons(config: Configuration, opts: Namespace):
     dir_path = opts.output
     dir_path.mkdir(exist_ok=True)
 
+    # create the client
     client = ApiClient(config)
+    stime = time.perf_counter()
+    if not opts.quiet:
+        client.progress = Spinner("API Requests ")
+
+    # get the topics
     topics_df = get_topics_dataframe(client, active=opts.active)
 
+    # show performance
+    if client.progress:
+        call_count = client.progress.index
+        client.progress.finish()
+        elapsed = time.perf_counter() - stime
+        print("{} API Calls in {:.2f} seconds".format(call_count, elapsed))
+
+    progress = Bar("Download icons ", max=len(topics_df))
     for topic_id, icon_id in topics_df.icon.items():
         if len(icon_id) > 0:
             # convert topic_id to local path
@@ -143,10 +193,63 @@ def command_topic_icons(config: Configuration, opts: Namespace):
                 icon_path.rename(icon_path.with_suffix(".svg"))
             else:
                 print("{icon_path}: image type {type} unknown", file=sys.stderr)
+        progress.next()
+    progress.finish()
 
     return 0
 
 
 def command_sort_content(config: Configuration, opts: Namespace):
-    print("sort-content: Not yet implemented", file=sys.stderr)
-    return 1
+    # create the client
+    client = ApiClient(config)
+    stime = time.perf_counter()
+    if not opts.quiet:
+        client.progress = Spinner("API Requests ")
+
+    content_api = TableApi(client, SnowTable.CONNECTED_CONTENT.with_fields("order"))
+
+    # get the content connected to active topics
+    query = ELQueries.CONNECTED_CONTENT_QUERY + "^topic.active=true"
+    content_df = content_api.get_dataframe(query)
+
+    # show performance
+    if client.progress:
+        call_count = client.progress.index
+        client.progress.finish()
+        elapsed = time.perf_counter() - stime
+        print("{} API Calls in {:.2f} seconds".format(call_count, elapsed))
+        client.progress = None
+
+    # within those, mask out those that start with the topic_path
+    topic_path_mask = content_df.topic_path.str.startswith(opts.topic_path)
+    content_df = content_df[topic_path_mask]
+    # make it not a "slice" of the data
+    content_df = content_df.loc[:, ["item_name", "order"]]
+
+    # recalculate the order column
+    def normalize_string_for_sorting(name: str):
+        return unicodedata.normalize("NFKC", name.lower())
+
+    content_df["sorting_item_name"] = content_df.item_name.map(
+        normalize_string_for_sorting
+    )
+    sorted_content = content_df.sort_values("sorting_item_name")  # type: ignore
+    sorted_content["new_order"] = range(100, 100 + 10 * sorted_content.shape[0], 10)
+
+    # modify the order of each item
+    changed = sorted_content[sorted_content.order != sorted_content.new_order]
+    total_count = len(changed)
+
+    progress = Bar("Updating ", max=total_count)
+    stime = time.perf_counter()
+    for index, row in changed.iterrows():
+        # "index" is a pandas "Label" and must be converted to string
+        sys_id = str(index)
+        r = content_api.update_record(sys_id, {"order": row.new_order})
+        r.raise_for_status()
+        progress.next()
+
+    progress.finish()
+    elapsed = time.perf_counter() - stime
+    print("Updated {} records in {:.2f} seconds".format(total_count, elapsed))
+    return 0
