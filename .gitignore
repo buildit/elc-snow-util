@@ -1,5 +1,20 @@
+# Interpreter files
 *.pyc
 *.pyo
 
+# Data files creates as reports
+*.csv
+*.xlsx
+
+# Icon files created by topic-icons
+*.png
+*.jpg
+*.svg
+
+# Distribution targets
+/dist/
+/*.egg-info/
+
+# Editors and IDEs
 /.vscode/
 /.DS_Store

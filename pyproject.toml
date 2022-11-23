@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "elc-snow-utils"
+version = "1.0.0"
+authors = [
+  { name="Dan Davis", email="daniel.davis@wipro.com" },
+]
+description = "Python script developed for ServiceNow for reporting and content sorting in the Employee Center"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/buildit/elc-snow-util"
+"Bug Tracker" = "https://github.com/buildid/elc-snow-util/elc-snow-util"
