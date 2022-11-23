@@ -211,7 +211,8 @@ def command_sort_content(config: Configuration, opts: Namespace):
     content_api = TableApi(client, SnowTable.CONNECTED_CONTENT.with_fields("order"))
 
     # get the content connected to active topics
-    query = ELQueries.CONNECTED_CONTENT_QUERY + "^topic.active=true"
+    query = ELQueries.CONNECTED_CONTENT_QUERY.format(client.config.taxonomy)
+    query += "^topic.active=true"
     content_df = content_api.get_dataframe(query)
 
     # show performance
