@@ -243,16 +243,19 @@ def command_sort_content(config: Configuration, opts: Namespace):
     changed = sorted_content[sorted_content.order != sorted_content.new_order]
     total_count = len(changed)
 
-    progress = Bar("Updating ", max=total_count)
-    stime = time.perf_counter()
-    for index, row in changed.iterrows():
-        # "index" is a pandas "Label" and must be converted to string
-        sys_id = str(index)
-        r = content_api.update_record(sys_id, {"order": row.new_order})
-        r.raise_for_status()
-        progress.next()
+    if total_count == 0:
+        print("Nothing to do - topic is already in sorted order")
+    else:
+        progress = Bar("Updating ", max=total_count)
+        stime = time.perf_counter()
+        for index, row in changed.iterrows():
+            # "index" is a pandas "Label" and must be converted to string
+            sys_id = str(index)
+            r = content_api.update_record(sys_id, {"order": row.new_order})
+            r.raise_for_status()
+            progress.next()
 
-    progress.finish()
-    elapsed = time.perf_counter() - stime
-    print("Updated {} records in {:.2f} seconds".format(total_count, elapsed))
+        progress.finish()
+        elapsed = time.perf_counter() - stime
+        print("Updated {} records in {:.2f} seconds".format(total_count, elapsed))
     return 0
