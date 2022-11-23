@@ -2,3 +2,4 @@
 *.pyo
 
 /.vscode/
+/.DS_Store
