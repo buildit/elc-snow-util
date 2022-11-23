@@ -74,9 +74,10 @@ def command_topics(config: Configuration, opts: Namespace):
 
 def command_catalog(config: Configuration, opts: Namespace):
 
-    # will we add the extra columns
-    extend_flag = opts.extend
+    # options specific to this command
     drop_missing = opts.drop_missing
+    active_items = opts.active_items
+    active_topics = opts.active_topics
 
     # what is the output format
     if opts.output.endswith(".csv"):
@@ -93,8 +94,8 @@ def command_catalog(config: Configuration, opts: Namespace):
         client.progress = Spinner("API Requests ")
 
     # go get the data
-    items_df = get_items_dataframe(client)
-    content_df = get_connected_content_dataframe(client)
+    items_df = get_items_dataframe(client, active=active_items)
+    content_df = get_connected_content_dataframe(client, active=active_topics)
 
     # show performance
     if client.progress:
@@ -104,16 +105,11 @@ def command_catalog(config: Configuration, opts: Namespace):
         print("{} API Calls in {:.2f} seconds".format(call_count, elapsed))
 
     # do remaining transformations
-    extend_items_with_menu_location(items_df, content_df)
-    if extend_flag:
-        add_missing_and_mismatch_columns(items_df)
 
+    # NOTE - extend is missing...
     if drop_missing:
         missing_mask = (items_df.all_menu_path == "") & (items_df.home_menu_path == "")
         items_df = items_df[~missing_mask]
-
-        if extend_flag:
-            items_df.drop(columns="menu_missing", inplace=True)
 
     # save to spreadsheet
     if output_format == FileFormat.CSV:
@@ -135,11 +131,6 @@ def command_catalog(config: Configuration, opts: Namespace):
             "All Menu Path",
             "Home Menu Path",
         ]
-        if extend_flag:
-            if drop_missing:
-                column_names += ["Menu Missing", "Menu Mismatch"]
-            else:
-                column_names += ["Menu Mismatch"]
         items_df.columns = column_names  # type: ignore
         items_df.to_excel(opts.output, index=False)
     return 0

@@ -3,9 +3,9 @@ from .tables import SnowTable, CATALOG_ITEM_LEAST_FIELDS, CATALOG_ITEM_CLASSES
 
 
 class ELQueries:
-    CONNECTED_CONTENT_QUERY = "topic.taxonomy.name=ELC_Employee_Center"
-    TOPIC_QUERY = "taxonomy.name=ELC_Employee_Center"
-    ACTIVE_TOPIC_QUERY = "taxonomy.name=ELC_Employee_Center^active=true"
+    CONNECTED_CONTENT_QUERY = "topic.taxonomy.name={}"
+    TOPIC_QUERY = "taxonomy.name={}"
+    ACTIVE_TOPIC_QUERY = "taxonomy.name={}^active=true"
 
 
 def get_items_dataframe(client, desired_fields=None):

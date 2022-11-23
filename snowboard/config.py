@@ -10,13 +10,14 @@ class Configuration(BaseModel):
     endpoint: HttpUrl
     username: str
     password: str
+    taxonomy: str
 
     @staticmethod
     def get_default_path() -> Path:
         if "USERPROFILE" in os.environ and "APPDATA" in os.environ:
-            return Path(os.environ["APPDATA"]) / "snowman.ini"
+            return Path(os.environ["APPDATA"]) / "snowutil.ini"
         else:
-            return Path(os.environ["HOME"]) / ".config" / "snowman.conf"
+            return Path(os.environ["HOME"]) / ".config" / "snowutil.conf"
 
     @classmethod
     def load(cls, path: Optional[Path] = None):
@@ -24,9 +25,9 @@ class Configuration(BaseModel):
             path = cls.get_default_path()
         with path.open() as f:
             config = safe_load(f)
-            if set(config.keys()) != {"endpoint", "username", "password"}:
+            if set(config.keys()) != {"endpoint", "username", "password", "taxonomy"}:
                 raise ValueError(
-                    "configuration keys are endpoint, username, and password"
+                    "configuration keys are endpoint, username, password, and taxonomy"
                 )
             endpoint = config["endpoint"]
             if endpoint.endswith("/"):
@@ -35,4 +36,5 @@ class Configuration(BaseModel):
                 endpoint=endpoint,
                 username=config["username"],
                 password=config["password"],
+                taxonomy=config["taxonomy"],
             )

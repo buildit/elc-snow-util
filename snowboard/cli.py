@@ -65,11 +65,16 @@ def create_parser(prog_name="snowman"):
     )
     scmd.add_argument("output", metavar="PATH", help="Path to CSV or Excel")
     scmd.add_argument(
-        "--extend",
-        "-e",
+        "--active-items",
         action="store_true",
         default=False,
-        help="Add columns for missing meuns and mismatch",
+        help="Query only on active items",
+    )
+    scmd.add_argument(
+        "--active-topics",
+        action="store_true",
+        default=False,
+        help="Show only menu connections to active topics",
     )
     scmd.add_argument(
         "--drop-missing",
